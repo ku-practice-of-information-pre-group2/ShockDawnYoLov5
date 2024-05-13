@@ -33,7 +33,9 @@ import csv
 import os
 import platform
 import sys
+import json
 from pathlib import Path
+import gradio as gr
 
 import torch
 
@@ -97,6 +99,8 @@ def run(
     dnn=False,  # use OpenCV DNN for ONNX inference
     vid_stride=1,  # video frame-rate stride
 ):
+    global person_count
+
     source = str(source)
     save_img = not nosave and not source.endswith(".txt")  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -199,28 +203,57 @@ def run(
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                # Write results
+                # Write results+计数
+                # count = 1
+                person_count = 0
                 for *xyxy, conf, cls in reversed(det):
-                    c = int(cls)  # integer class
-                    label = names[c] if hide_conf else f"{names[c]}"
-                    confidence = float(conf)
-                    confidence_str = f"{confidence:.2f}"
-
-                    if save_csv:
-                        write_to_csv(p.name, label, confidence_str)
-
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
-                        with open(f"{txt_path}.txt", "a") as f:
-                            f.write(("%g " * len(line)).rstrip() % line + "\n")
+                        line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
+                        with open(txt_path + '.txt', 'a') as f:
+                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
+ 
+                    if save_img or save_crop or view_img:  
+                        c = int(cls)  # 分类数
+                        # label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f} {count}') # TODO 标签展示这里加了末尾的{count}
+                        label = f'{names[int(cls)]} {conf:.2f}'
 
-                    if save_img or save_crop or view_img:  # Add bbox to image
-                        c = int(cls)  # integer class
-                        label = None if hide_labels else (names[c] if hide_conf else f"{names[c]} {conf:.2f}")
                         annotator.box_label(xyxy, label, color=colors(c, True))
-                    if save_crop:
-                        save_one_box(xyxy, imc, file=save_dir / "crops" / names[c] / f"{p.stem}.jpg", BGR=True)
+                        # count += 1 # ！！！ 这里加了循环累加
+                        if int(cls) == 0:
+                            person_count += 1
+                    
+            if save_img:
+                ##############################视频识别显示计数内容####################################
+                text = 'person_num:%d ' % (person_count)
+                cv2.putText(im0, text, (180, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 5)
+                ####################################################################################
+
+
+                
+
+                # # Write results
+                # for *xyxy, conf, cls in reversed(det):
+                #     c = int(cls)  # integer class
+                #     label = names[c] if hide_conf else f"{names[c]}"
+                #     confidence = float(conf)
+                #     confidence_str = f"{confidence:.2f}"
+
+                #     if save_csv:
+                #         write_to_csv(p.name, label, confidence_str)
+
+                #     if save_txt:  # Write to file
+                #         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                #         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                #         with open(f"{txt_path}.txt", "a") as f:
+                #             f.write(("%g " * len(line)).rstrip() % line + "\n")
+
+                #     if save_img or save_crop or view_img:  # Add bbox to image
+                #         c = int(cls)  # integer class
+                #         label = None if hide_labels else (names[c] if hide_conf else f"{names[c]} {conf:.2f}")
+                #         annotator.box_label(xyxy, label, color=colors(c, True))
+                #     if save_crop:
+                #         save_one_box(xyxy, imc, file=save_dir / "crops" / names[c] / f"{p.stem}.jpg", BGR=True)
 
             # Stream results
             im0 = annotator.result()
@@ -306,7 +339,26 @@ def main(opt):
     check_requirements(ROOT / "requirements.txt", exclude=("tensorboard", "thop"))
     run(**vars(opt))
 
+#global parameter
+#person_count = 0
 
 if __name__ == "__main__":
+    person_count = 0
     opt = parse_opt()
     main(opt)
+
+    # 构造json文件
+    export_data = [
+    	{ "Total People Inside": person_count}
+    # 添加更多数据行...
+	]
+
+	# 指定要保存的JSON文件路径
+    json_file = '/Users/qingjiu/kyodai/m1/project/yolov5/runs/counting_data.json'
+
+	# 将数据写入JSON文件
+    with open(json_file, 'w') as f:
+	    json.dump(export_data, f, indent=4)
+    
+
+

@@ -1,0 +1,17 @@
+python detect.py --weights yolov5s.pt --source 0                               # webcam
+                                               img.jpg                         # image
+                                               vid.mp4                         # video
+                                               screen                          # screenshot
+                                               path/                           # directory
+                                               list.txt                        # list of images
+                                               list.streams                    # list of streams
+                                               'path/*.jpg'                    # glob
+                                               'https://youtu.be/LNwODJXcvt4'  # YouTube
+                                               'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP stream
+
+python detect.py --weights yolov5s.pt --source data/images/zidane.jpg
+python detect.py --weights yolov5s.pt --source data/images/line1.png
+python detect.py --source data/images/line1.png
+python detect.py --source data/images/ky1.jpg
+
+uploads templates app.py gradio_demo.py
