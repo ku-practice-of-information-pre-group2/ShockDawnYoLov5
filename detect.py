@@ -36,7 +36,7 @@ import sys
 import json
 from pathlib import Path
 import gradio as gr
-
+from datetime import datetime
 import torch
 
 FILE = Path(__file__).resolve()
@@ -347,9 +347,15 @@ if __name__ == "__main__":
     opt = parse_opt()
     main(opt)
 
+    # 获取当前的日期和时间
+    now = datetime.now()
+    # 格式化为字符串
+    date_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
     # 构造json文件
     export_data = [
-    	{ "Total People Inside": person_count}
+    	{   "timestamp": date_time_str,
+            "Line_length": person_count}
     # 添加更多数据行...
 	]
 
